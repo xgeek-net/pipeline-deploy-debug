@@ -1,0 +1,55 @@
+sudo: required
+dist: trusty
+language: node_js
+os:
+  - osx
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - libstdc++-4.9-dev
+cache: 
+  directories:
+    - node_modules
+env:
+  - NODE_VERSION="10.8.0"
+before_install:
+  - git clone https://github.com/xgeek-net/pipeline-release.git /tmp/.nvm
+  - nvm install $NODE_VERSION
+  - nvm use --delete-prefix $NODE_VERSION
+  - node --version
+  - echo $CLIENT_SECRET | base64 -D > src/config/client.js
+  - echo $MOCHA_SECRET | base64 -D > test/token.js
+  # Prepare NodeGit
+  - export npm_config_target=3.1.9
+  - export npm_config_arch=x64
+  - export npm_config_target_arch=x64
+  - export npm_config_disturl=https://atom.io/download/electron
+  - export npm_config_runtime=electron
+  - export npm_config_build_from_source=true
+install:
+  - npm install
+#before_script:
+script:
+  - NODE_ENV=test npm run coveralls
+after_success:
+  - cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
+before_deploy:
+  - brew update
+  - brew install bower
+  - brew install makensis
+  - bower install
+  - npm run archive:mac
+deploy:
+  provider: releases
+  api_key:
+    secure: "fKSrtFDWmc/j1e91oNT0rXtZkHfNd4SkQwhQANNwHEmTL86ejmGhtduUrpgVojvxC3ddjIUfJD6C27Je2Mx+MEQwDAq3KT19hjnaOUIYTdViYssVslyXgtHCIEy6K7YOvaxfs8sSsePCsFoLtRdeAiMqxLAWkzQJ5OfwIxVog7yOX1pEj4eFCxOXvL+JQEnccNQaZWrRYvgXkdIqNfvlyeihdcHZgirHvCZ3uwPtYJHGcV4U0SbLbXYNTrFjKBo4Q247uL8yL2DVwALyxT3KXXIIDRwThQFXKxRGM21ymDWFNkomDur3I/oRd98Ys04PmWBlPhqNsm4Q8ICrZ76z/a6VDHR0q44v+cMARUpH620/EcmVBCxLCQa5/idneuO3NXL5hubwduH7LICB+55zpRxlXc0IjL2L3ho2tUra0e/w1zNAOJFqPPgL6iJVONostaryJ2J04kA17zAktHEUgvbNXI33iewbz32ydbJW/GB9+Cw9wxjTvOpj1loZKTS7XEbarQovSUjElHEq9Zw4oopUtlmkXo/VfCngNgApy/K/jOdlA+PRMBek6yQbXppy2ieVYEdahBXrWggIyzxcPVozsviETDXbtlz9VN0UfvSsQQdDKW03bc11BEmdy4cZ+pYwzI96zubIcQV5pcvABcwJKKCq83uz6gDSk6hqnN4="
+  file:
+    - build/dist/Pipeline-$TRAVIS_TAG-mac.zip
+    - build/dist/Pipeline-$TRAVIS_TAG.dmg
+  skip_cleanup: true
+  on:
+    repo: xgeek-net/pipeline-deploy-debug
+    tags: true
+    branch: master

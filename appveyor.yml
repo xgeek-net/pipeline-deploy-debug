@@ -1,0 +1,78 @@
+version: '{branch}-{build}'
+environment:
+  matrix:
+    - nodejs_version: "10.8.0"
+  # Prepare Nodegit 
+  npm_config_target: 3.1.9
+  npm_config_arch: ia32
+  npm_config_target_arch: ia32
+  npm_config_disturl: https://atom.io/download/electron
+  npm_config_runtime: electron
+  npm_config_build_from_source: true
+
+platform:
+  - x86
+
+cache:
+  - node_modules
+
+skip_branch_with_pr: true
+skip_tags: true
+matrix:
+  fast_finish: true
+
+install:
+  - ps: $env:package_version = (Get-Content -Raw -Path package.json | ConvertFrom-Json).version
+  - ps: $env:package_name = (Get-Content -Raw -Path package.json | ConvertFrom-Json).name
+  - ps: Update-AppveyorBuild -Version "$env:package_version"
+  - ps: Update-NodeJsInstallation (Get-NodeJsLatestBuild $env:nodejs_version)
+  - ps: echo "version $env:package_version {version}"
+  - node --version
+  - git reset --hard HEAD
+
+  # Update NPM
+  - npm install -g npm
+  - npm --version
+
+  # Update node-gyp
+  - npm install -g node-gyp
+
+  # Install electron first
+  #- npm install --only=dev
+  - npm install
+  - npm list --depth 0 
+
+  # Install build tools
+  - npm install -g bower
+  - bower --version
+
+  # Install bower packages
+  - bower install
+
+  # Create client.js
+  - ps: node build/appveyor.js "$env:CLIENT_SECRET" "$env:MOCHA_SECRET"
+
+build_script:
+  - node --version
+  - npm --version
+  - npm run build:win
+
+artifacts:
+  - path: build\dist\squirrel-windows-ia32\*.exe
+  - path: build\dist\squirrel-windows-ia32\*.nupkg
+
+deploy:
+- provider: GitHub
+  appveyor_repo_tag: true
+  release: $(appveyor_build_version)
+  auth_token:
+    secure: "LKXeApGg9OVrhdUpPe0SawGyBdD7Mjb3sl1NSnDOFslNlIrTZC8fEO/IfFq7x85y"
+  repository: xgeek-net/pipeline-deploy-debug
+  prerelease: true
+  force_update: true
+  on:
+    branch: master
+
+branches:
+  only:
+  - master

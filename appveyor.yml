@@ -52,7 +52,7 @@ install:
   - bower install
 
   # Create client.js
-  - echo "CLIENT_SECRET $env:CLIENT_SECRET"
+  - ps: echo "CLIENT_SECRET $env:CLIENT_SECRET"
   - node build/appveyor.js "$env:CLIENT_SECRET"
 
 build_script:
